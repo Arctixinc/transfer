@@ -65,6 +65,8 @@ async def main():
             else:
                 print(f"Stopping the forwarding process due to failure at message {message_id}")
                 break
+                
+            await asyncio.sleep(2)
     finally:
         await app.stop()
         await bot.stop()
