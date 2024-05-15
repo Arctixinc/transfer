@@ -29,6 +29,8 @@ collection = db[COLLECTION_NAME]
 # Initialize the Pyrogram Client
 app = Client("forward_bot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
+bot = Client("my_account", bot_token="6285135839:AAE5savazJeNxwkAnGW3mW9l-4hUPLLoUds", api_id="25033101", api_hash="d983e07db3fe330a1fd134e61604e11d")
+
 async def forward_specific_message(message_id):
     try:
         # Fetch the message from the source channel
@@ -38,8 +40,10 @@ async def forward_specific_message(message_id):
         print(f"Successfully forwarded message {message_id} to {DESTINATION_CHANNEL_ID}")
         return True
     except errors.FloodWait as e:
+        await bot.send_message(chat_id=1881720028, text=f"<b>😥 Pʟᴇᴀsᴇ Wᴀɪᴛ ᴅᴏɴ'ᴛ ᴅᴏ ғʟᴏᴏᴅɪɴɢ ᴡᴀɪᴛ ғᴏʀ {e.value} Sᴇᴄᴄᴏɴᴅs</b>")
         print(f"Flood wait error: waiting for {e.value} seconds")
         await asyncio.sleep(e.value)
+        await bot.send_message(chat_id=1881720028, text=f"<b>Now Every Thing Ok</b>")
         return await forward_specific_message(message_id)  # Retry after the wait
     except Exception as e:
         print(f"Failed to forward message {message_id}: {e}")
@@ -47,6 +51,7 @@ async def forward_specific_message(message_id):
 
 async def main():
     await app.start()
+    await bot.start()
     try:
         # Fetch the last processed message ID from MongoDB
         status = collection.find_one({'_id': 1})
@@ -62,6 +67,7 @@ async def main():
                 break
     finally:
         await app.stop()
+        await bot.stop()
 
 if __name__ == '__main__':
     asyncio.run(main())
