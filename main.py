@@ -12,8 +12,8 @@ SOURCE_CHANNEL_ID = -1002079489506  # Use negative sign for channel IDs
 DESTINATION_CHANNEL_ID = -1002084341815
 
 # Start and End Message IDs to forward
-START_MESSAGE_ID = 2
-END_MESSAGE_ID = 498572  # Example end ID, adjust as needed
+START_MESSAGE_ID = 313
+END_MESSAGE_ID = 498858  # Example end ID, adjust as needed
 
 # Initialize the Client
 app = Client("forward_bot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
