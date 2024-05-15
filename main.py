@@ -1,21 +1,32 @@
 from pyrogram import Client, errors
 import asyncio
 import os
+from pymongo import MongoClient
 
 # Environment variables for sensitive data
 API_ID = int(os.getenv('API_ID', 4796990))              
-API_HASH = os.getenv('API_HASH', '32b6f41a4bf740efed2d4ce911f145c7')            
+API_HASH = os.getenv('API_HASH', '32b6f41a4bf740efed2d4ce911f145c7')
 SESSION_STRING = os.getenv('SESSION_STRING', "BAAtp4AAQTkp622SwxukmACtcaPzZ_3TG8DyDojVIFuaI98uDI1KAWF2ul8mSqWVwW8Y5y96p1IMpx3yUmWnLesJMQ3-6kxIvBrq85CsYQqkB0oddt1A0HgNRK82KQOeczTcSfOmEtpuLCzZnTgqztvHWSkU7H3yHGXsZkELLLiCbma3YMCAMywvHilr0Wl05JZxxG8LsS7eJsA7qW6UP9oCDDPowA0NP4HKiSzAqLxqg61yDCQiOaRCX0VboM4_5l_ASUPImicn8fH45J4HQC94BqQV7pd9e8QxmPTorgHYFjuSn1uRsCBGVCqckaI7KPwDkkMvLjUfOrw01X0ejIhTQ-u_iQAAAAF01KpnAA")
+
+# MongoDB configuration
+MONGO_URI = os.getenv('MONGO_URI', 'mongodb+srv://abcd:abcd@personalproject.mxx6dgi.mongodb.net/?retryWrites=true&w=majority')
+DB_NAME = 'forward_bot_db'
+COLLECTION_NAME = 'message_status'
 
 # Channel IDs
 SOURCE_CHANNEL_ID = -1002079489506  # Use negative sign for channel IDs
 DESTINATION_CHANNEL_ID = -1002084341815
 
 # Start and End Message IDs to forward
-START_MESSAGE_ID = 313
-END_MESSAGE_ID = 498858  # Example end ID, adjust as needed
+START_MESSAGE_ID = 1504
+END_MESSAGE_ID = 500000
 
-# Initialize the Client
+# Initialize the MongoDB client
+mongo_client = MongoClient(MONGO_URI)
+db = mongo_client[DB_NAME]
+collection = db[COLLECTION_NAME]
+
+# Initialize the Pyrogram Client
 app = Client("forward_bot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
 async def forward_specific_message(message_id):
@@ -37,9 +48,16 @@ async def forward_specific_message(message_id):
 async def main():
     await app.start()
     try:
-        for message_id in range(START_MESSAGE_ID, END_MESSAGE_ID + 1):
+        # Fetch the last processed message ID from MongoDB
+        status = collection.find_one({'_id': 1})
+        last_processed_id = status['last_processed_id'] if status else START_MESSAGE_ID - 1
+
+        for message_id in range(last_processed_id + 1, END_MESSAGE_ID + 1):
             success = await forward_specific_message(message_id)
-            if not success:
+            if success:
+                # Update the last processed message ID in MongoDB
+                collection.update_one({'_id': 1}, {'$set': {'last_processed_id': message_id}}, upsert=True)
+            else:
                 print(f"Stopping the forwarding process due to failure at message {message_id}")
                 break
     finally:
