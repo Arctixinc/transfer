@@ -66,8 +66,11 @@ async def forward_specific_message(message_id, total_files):
 async def send_progress_update(current_file, total_files):
     progress = (current_file / total_files) * 100
     remaining_files = total_files - current_file
-    time_per_file = 1  # Adjust this value based on actual performance
-    eta_seconds = remaining_files * time_per_file
+
+    # Calculate time per batch (assuming 10 messages per batch)
+    time_per_batch = 10 * 1  # Adjust this value based on actual performance
+
+    eta_seconds = remaining_files * time_per_batch
 
     eta_days = eta_seconds // 86400
     eta_seconds %= 86400
@@ -160,3 +163,4 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+
