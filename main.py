@@ -4,7 +4,7 @@ import os
 from pymongo import MongoClient
 
 # Environment variables for sensitive data
-API_ID = int(os.getenv('API_ID', 4796990))              
+API_ID = int(os.getenv('API_ID', 4796990))
 API_HASH = os.getenv('API_HASH', '32b6f41a4bf740efed2d4ce911f145c7')
 SESSION_STRING = os.getenv('SESSION_STRING', "BAGNSRsAB0CleNj3Xk-t2nqPUAJpMrChIKhk5GgGCr3MyWReVJaczWe96GhJB9g39y_-vdVrjr4BOrxTMkmFHRwjWS0-c7AC2bzJzjVjFZJYSFfGWjsK1qr-EB2cwTI6J6hsFQyyU4FHJuvQvy2EFfIw0Yhop0W89aR9HKN9fiwk6cDa4aODS-HvrY-mwvjBvL67KdHx1sxELISlc0Q8G8bAkQ1Qu4KSLhQ4wSEe5l6k33vTbM_t3eRgUzL9l1-ramwxHVD2t8KfC065gbFj8W3pDodldGa-O298PPwclFXkJssRWFqOt8KOhoPBxLH0zV8RolUtBGBy6JvE29HtogjBO8AGFQAAAAF01KpnAA")
 
@@ -13,8 +13,9 @@ MONGO_URI = os.getenv('MONGO_URI', 'mongodb+srv://abcd:abcd@personalproject.mxx6
 DB_NAME = 'forward_bot_db'
 COLLECTION_NAME = 'message_status'
 PROGRESS_COLLECTION_NAME = 'progress_messages'
+
 # Channel IDs
-SOURCE_CHANNEL_ID = -1002079489506  # Use negative sign for channel IDs
+SOURCE_CHANNEL_ID = -1002079489506
 DESTINATION_CHANNEL_ID = -1002084341815
 
 # Start and End Message IDs to forward
@@ -126,8 +127,9 @@ async def main():
                 collection.update_one({'_id': 1}, {'$set': {'last_processed_id': message_id}}, upsert=True)
                 await asyncio.sleep(2)  # Adjust the duration (in seconds) as needed
             else:
-                print(f"Stopping the forwarding process due to failure at message {message_id}")
-                break
+                print(f"Skipping message {message_id} due to failure")
+                await bot.send_message(chat_id=STATUS_ID, text=f"Skipping message {message_id} due to failure")
+                continue
     finally:
         await app.stop()
         await bot.stop()
