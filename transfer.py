@@ -169,9 +169,12 @@ async def main():
                 await asyncio.sleep(2)  # Adjust the duration (in seconds) as needed
             else:
                 print(f"Skipping message {message_id} due to failure")
-                await bot.send_message(chat_id=PROGRESS_ID[0], text=f"Skipping message {message_id} due to failure")
-                await bot.send_message(chat_id=PROGRESS_ID[1], text=f"Skipping message {message_id} due to failure")
+                for progress_id in PROGRESS_ID:
+                    await bot.send_message(chat_id=progress_id, text=f"Skipping message {message_id} due to failure")
                 continue
+                #await bot.send_message(chat_id=PROGRESS_ID[0], text=f"Skipping message {message_id} due to failure")
+                #await bot.send_message(chat_id=PROGRESS_ID[1], text=f"Skipping message {message_id} due to failure")
+                #continue
     finally:
         await app.stop()
         await bot.stop()
