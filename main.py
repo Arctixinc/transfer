@@ -6,13 +6,13 @@ from pymongo import MongoClient
 # Environment variables for sensitive data
 API_ID = int(os.getenv('API_ID', 4796990))              
 API_HASH = os.getenv('API_HASH', '32b6f41a4bf740efed2d4ce911f145c7')
-SESSION_STRING = os.getenv('SESSION_STRING', "BAAtp4AAQTkp622SwxukmACtcaPzZ_3TG8DyDojVIFuaI98uDI1KAWF2ul8mSqWVwW8Y5y96p1IMpx3yUmWnLesJMQ3-6kxIvBrq85CsYQqkB0oddt1A0HgNRK82KQOeczTcSfOmEtpuLCzZnTgqztvHWSkU7H3yHGXsZkELLLiCbma3YMCAMywvHilr0Wl05JZxxG8LsS7eJsA7qW6UP9oCDDPowA0NP4HKiSzAqLxqg61yDCQiOaRCX0VboM4_5l_ASUPImicn8fH45J4HQC94BqQV7pd9e8QxmPTorgHYFjuSn1uRsCBGVCqckaI7KPwDkkMvLjUfOrw01X0ejIhTQ-u_iQAAAAF01KpnAA")
+SESSION_STRING = os.getenv('SESSION_STRING', "BAGNSRsAB0CleNj3Xk-t2nqPUAJpMrChIKhk5GgGCr3MyWReVJaczWe96GhJB9g39y_-vdVrjr4BOrxTMkmFHRwjWS0-c7AC2bzJzjVjFZJYSFfGWjsK1qr-EB2cwTI6J6hsFQyyU4FHJuvQvy2EFfIw0Yhop0W89aR9HKN9fiwk6cDa4aODS-HvrY-mwvjBvL67KdHx1sxELISlc0Q8G8bAkQ1Qu4KSLhQ4wSEe5l6k33vTbM_t3eRgUzL9l1-ramwxHVD2t8KfC065gbFj8W3pDodldGa-O298PPwclFXkJssRWFqOt8KOhoPBxLH0zV8RolUtBGBy6JvE29HtogjBO8AGFQAAAAF01KpnAA")
 
 # MongoDB configuration
 MONGO_URI = os.getenv('MONGO_URI', 'mongodb+srv://abcd:abcd@personalproject.mxx6dgi.mongodb.net/?retryWrites=true&w=majority')
 DB_NAME = 'forward_bot_db'
 COLLECTION_NAME = 'message_status'
-
+PROGRESS_COLLECTION_NAME = 'progress_messages'
 # Channel IDs
 SOURCE_CHANNEL_ID = -1002079489506  # Use negative sign for channel IDs
 DESTINATION_CHANNEL_ID = -1002084341815
@@ -26,6 +26,7 @@ STATUS_ID = 1881720028
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client[DB_NAME]
 collection = db[COLLECTION_NAME]
+progress_collection = db['progress_messages']
 
 # Initialize the Pyrogram Client
 app = Client("forward_bot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
@@ -41,7 +42,7 @@ async def forward_specific_message(message_id, total_files):
         print(f"Successfully forwarded message {message_id} to {DESTINATION_CHANNEL_ID}")
 
         # Calculate progress and send update every 5 seconds
-        if message_id % 50 == 0:  # Adjust this value as needed
+        if message_id % 10 == 0:  # Adjust this value as needed
             await send_progress_update(message_id, total_files)
 
         return True
@@ -90,7 +91,7 @@ async def send_progress_update(current_file, total_files):
             # If no progress message ID is found in the database, send a new message
             sent_message = await bot.send_message(chat_id=STATUS_ID, text=progress_message)
             # Save the message ID in the database for future edits
-            progress_collection.update_one({}, {'$set': {'message_id': sent_message.message_id}}, upsert=True)
+            progress_collection.update_one({}, {'$set': {'message_id': sent_message.id}}, upsert=True)
     except errors.MessageNotModified:
         # If the message hasn't changed, do nothing
         pass
@@ -98,7 +99,7 @@ async def send_progress_update(current_file, total_files):
         # If the message ID is invalid or the message is not found, send a new message
         sent_message = await bot.send_message(chat_id=STATUS_ID, text=progress_message)
         # Save the message ID in the database for future edits
-        progress_collection.update_one({}, {'$set': {'message_id': sent_message.message_id}}, upsert=True)
+        progress_collection.update_one({}, {'$set': {'message_id': sent_message.id}}, upsert=True)
     except Exception as e:
         # Handle any other exceptions
         print(f"Error updating progress message: {e}")
