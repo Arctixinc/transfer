@@ -73,13 +73,14 @@ async def send_progress_update(current_file, total_files):
     eta_seconds %= 60
 
     # Construct progress message
+    progress_message = ""
     progress_message += "["
     # Construct progress bar
     num_blocks = 20
     completed_blocks = int(progress * num_blocks // 100)
     progress_message += "⬢" * completed_blocks
     progress_message += "⬡" * (num_blocks - completed_blocks)
-    progress_message += "]"
+    progress_message += "]\n"
     progress_message += "╭━━━━❰ᴘʀᴏɢʀᴇss ʙᴀʀ❱━➣\n"
     progress_message += f"┣⪼ 🗃️ Files uploaded: {current_file} | {total_files}\n"
     progress_message += f"┣⪼ ⏳️ Done : {progress:.2f}%\n"
