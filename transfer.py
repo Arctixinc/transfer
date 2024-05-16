@@ -65,7 +65,7 @@ async def send_progress_update(current_file, total_files):
 
     # Calculate estimated time remaining
     remaining_files = total_files - current_file
-    time_per_file = 2  # Time per file (in seconds)
+    time_per_file = 1  # Time per file (in seconds)
     eta_seconds = remaining_files * time_per_file
 
     eta_days = eta_seconds // 86400
@@ -166,7 +166,7 @@ async def main():
             if success:
                 # Update the last processed message ID in MongoDB
                 collection.update_one({'_id': 1}, {'$set': {'last_processed_id': message_id}}, upsert=True)
-                await asyncio.sleep(2)  # Adjust the duration (in seconds) as needed
+                await asyncio.sleep(1)  # Adjust the duration (in seconds) as needed
             else:
                 print(f"Skipping message {message_id} due to failure")
                 for progress_id in PROGRESS_ID:
