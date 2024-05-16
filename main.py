@@ -2,9 +2,10 @@ from pyrogram import Client, errors
 import asyncio
 import os
 from pymongo import MongoClient
+from pyrogram.errors import BadRequest
 
 # Environment variables for sensitive data
-API_ID = int(os.getenv('API_ID', 4796990))
+API_ID = int(os.getenv('API_ID', 4796990))              
 API_HASH = os.getenv('API_HASH', '32b6f41a4bf740efed2d4ce911f145c7')
 SESSION_STRING = os.getenv('SESSION_STRING', "BAGNSRsAB0CleNj3Xk-t2nqPUAJpMrChIKhk5GgGCr3MyWReVJaczWe96GhJB9g39y_-vdVrjr4BOrxTMkmFHRwjWS0-c7AC2bzJzjVjFZJYSFfGWjsK1qr-EB2cwTI6J6hsFQyyU4FHJuvQvy2EFfIw0Yhop0W89aR9HKN9fiwk6cDa4aODS-HvrY-mwvjBvL67KdHx1sxELISlc0Q8G8bAkQ1Qu4KSLhQ4wSEe5l6k33vTbM_t3eRgUzL9l1-ramwxHVD2t8KfC065gbFj8W3pDodldGa-O298PPwclFXkJssRWFqOt8KOhoPBxLH0zV8RolUtBGBy6JvE29HtogjBO8AGFQAAAAF01KpnAA")
 
@@ -13,9 +14,8 @@ MONGO_URI = os.getenv('MONGO_URI', 'mongodb+srv://abcd:abcd@personalproject.mxx6
 DB_NAME = 'forward_bot_db'
 COLLECTION_NAME = 'message_status'
 PROGRESS_COLLECTION_NAME = 'progress_messages'
-
 # Channel IDs
-SOURCE_CHANNEL_ID = -1002079489506
+SOURCE_CHANNEL_ID = -1002079489506 
 DESTINATION_CHANNEL_ID = -1002084341815
 
 # Start and End Message IDs to forward
@@ -112,6 +112,15 @@ async def send_progress_update(current_file, total_files):
         # Handle any other exceptions
         print(f"Error updating progress message: {e}")
 
+async def get_latest_message_id():
+    try:
+        # Fetch the latest message ID from the source channel
+        async for message in app.get_chat_history(SOURCE_CHANNEL_ID, limit=1):
+            return message.id
+    except BadRequest as e:
+        print(f"Failed to fetch latest message ID: {e}")
+        return END_MESSAGE_ID  # Set a default value in case of failure
+
 async def main():
     await app.start()
     await bot.start()
@@ -119,6 +128,16 @@ async def main():
         # Fetch the last processed message ID from MongoDB
         status = collection.find_one({'_id': 1})
         last_processed_id = status['last_processed_id'] if status else START_MESSAGE_ID - 1
+
+        # Fetch the latest message ID from the source channel
+        end_message_id = await get_latest_message_id()
+
+        # Update the END_MESSAGE_ID variable
+        global END_MESSAGE_ID
+        END_MESSAGE_ID = end_message_id
+
+        # Save the END_MESSAGE_ID in the database
+        collection.update_one({'_id': 1}, {'$set': {'end_message_id': END_MESSAGE_ID}}, upsert=True)
 
         for message_id in range(last_processed_id + 1, END_MESSAGE_ID + 1):
             success = await forward_specific_message(message_id, total_files=END_MESSAGE_ID)
