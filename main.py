@@ -20,6 +20,7 @@ DESTINATION_CHANNEL_ID = -1002084341815
 # Start and End Message IDs to forward
 START_MESSAGE_ID = 1504
 END_MESSAGE_ID = 500000
+STATUS_ID = 1881720028
 
 # Initialize the MongoDB client
 mongo_client = MongoClient(MONGO_URI)
@@ -45,10 +46,10 @@ async def forward_specific_message(message_id, total_files):
 
         return True
     except errors.FloodWait as e:
-        await bot.send_message(chat_id=1881720028, text=f"<b>😥 Pʟᴇᴀsᴇ Wᴀɪᴛ ᴅᴏɴ'ᴛ ᴅᴏ ғʟᴏᴏᴅɪɴɢ ᴡᴀɪᴛ ғᴏʀ {e.value} Sᴇᴄᴄᴏɴᴅs</b>")
+        await bot.send_message(chat_id=STATUS_ID, text=f"<b>😥 Pʟᴇᴀsᴇ Wᴀɪᴛ ᴅᴏɴ'ᴛ ᴅᴏ ғʟᴏᴏᴅɪɴɢ ᴡᴀɪᴛ ғᴏʀ {e.value} Sᴇᴄᴄᴏɴᴅs</b>")
         print(f"Flood wait error: waiting for {e.value} seconds")
         await asyncio.sleep(e.value)
-        await bot.send_message(chat_id=1881720028, text=f"<b>Now Every Thing Ok</b>")
+        await bot.send_message(chat_id=STATUS_ID, text=f"<b>Now Every Thing Ok</b>")
         return await forward_specific_message(message_id, total_files)  # Retry after the wait
     except Exception as e:
         print(f"Failed to forward message {message_id}: {e}")
@@ -78,9 +79,31 @@ async def send_progress_update(current_file, total_files):
     progress_message += "░" * (num_blocks - completed_blocks)
     progress_message += "]"
 
-    # Send progress update to chat
-    await bot.send_message(chat_id=1881720028, text=progress_message)
-
+    try:
+        # Retrieve the progress message ID from the database
+        progress_doc = progress_collection.find_one({})
+        if progress_doc:
+            progress_message_id = progress_doc['message_id']
+            # Attempt to edit an existing progress message
+            await bot.edit_message_text(chat_id=STATUS_ID, message_id=progress_message_id, text=progress_message)
+        else:
+            # If no progress message ID is found in the database, send a new message
+            sent_message = await bot.send_message(chat_id=STATUS_ID, text=progress_message)
+            # Save the message ID in the database for future edits
+            progress_collection.update_one({}, {'$set': {'message_id': sent_message.message_id}}, upsert=True)
+    except errors.MessageNotModified:
+        # If the message hasn't changed, do nothing
+        pass
+    except errors.MessageIdInvalid:
+        # If the message ID is invalid or the message is not found, send a new message
+        sent_message = await bot.send_message(chat_id=STATUS_ID, text=progress_message)
+        # Save the message ID in the database for future edits
+        progress_collection.update_one({}, {'$set': {'message_id': sent_message.message_id}}, upsert=True)
+    except Exception as e:
+        # Handle any other exceptions
+        print(f"Error updating progress message: {e}")
+        
+            
 async def main():
     await app.start()
     await bot.start()
