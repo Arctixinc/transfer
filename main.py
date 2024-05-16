@@ -64,13 +64,18 @@ async def send_progress_update(current_file, total_files):
     remaining_files = total_files - current_file
     time_per_file = 2  # Time per file (in seconds)
     eta_seconds = remaining_files * time_per_file
+
+    eta_days = eta_seconds // 86400
+    eta_seconds %= 86400
+    eta_hours = eta_seconds // 3600
+    eta_seconds %= 3600
     eta_minutes = eta_seconds // 60
-    eta_hours = eta_minutes // 60
+    eta_seconds %= 60
 
     # Construct progress message
     progress_message = f"Progress: {progress:.2f}%\n"
     progress_message += f"Files uploaded: {current_file}/{total_files}\n"
-    progress_message += f"ETA: {int(eta_hours)} hours, {int(eta_minutes % 60)} minutes\n"
+    progress_message += f"ETA: {int(eta_days)} days, {int(eta_hours)} hours, {int(eta_minutes)} minutes, {int(eta_seconds)} seconds\n"
     progress_message += "📊 ["
 
     # Construct progress bar
