@@ -1,8 +1,12 @@
-from pyrogram import Client, errors
+import logging
 import asyncio
 import os
+from pyrogram import Client, errors
 from pymongo import MongoClient
 from pyrogram.errors import BadRequest
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Environment variables for sensitive data
 API_ID = int(os.getenv('API_ID', 4796990))              
@@ -42,7 +46,7 @@ async def forward_specific_message(message_id, total_files):
         message = await app.get_messages(SOURCE_CHANNEL_ID, message_id)
         # Forward the message to the destination channel
         await app.copy_message(chat_id=DESTINATION_CHANNEL_ID, from_chat_id=SOURCE_CHANNEL_ID, message_id=message_id)
-        print(f"Successfully forwarded message {message_id} to {DESTINATION_CHANNEL_ID}")
+        logging.info(f"Successfully forwarded message {message_id} to {DESTINATION_CHANNEL_ID}")
 
         # Calculate progress and send update every 10 messages
         if message_id % 10 == 0:  # Adjust this value as needed
@@ -51,12 +55,12 @@ async def forward_specific_message(message_id, total_files):
         return True
     except errors.FloodWait as e:
         await bot.send_message(chat_id=STATUS_ID, text=f"<b>😥 Pʟᴇᴀsᴇ Wᴀɪᴛ ᴅᴏɴ'ᴛ ғʟᴏᴏᴅ, ᴡᴀɪᴛ ғᴏʀ {e.value} sᴇᴄᴏɴᴅs</b>")
-        print(f"Flood wait error: waiting for {e.value} seconds")
+        logging.warning(f"Flood wait error: waiting for {e.value} seconds")
         await asyncio.sleep(e.value)
         await bot.send_message(chat_id=STATUS_ID, text=f"<b>Now Every Thing Ok</b>")
         return await forward_specific_message(message_id, total_files)  # Retry after the wait
     except Exception as e:
-        print(f"Failed to forward message {message_id}: {e}")
+        logging.error(f"Failed to forward message {message_id}: {e}")
         return False
 
 async def send_progress_update(current_file, total_files):
@@ -116,7 +120,7 @@ async def send_progress_update(current_file, total_files):
                 progress_collection.update_one({'progress_id': progress_id}, {'$set': {'message_id': sent_message.id}}, upsert=True)
     except Exception as e:
         # Handle any other exceptions
-        print(f"Error updating progress message: {e}")
+        logging.error(f"Error updating progress message: {e}")
 
 async def get_latest_message_id():
     try:
@@ -124,7 +128,7 @@ async def get_latest_message_id():
         async for message in app.get_chat_history(SOURCE_CHANNEL_ID, limit=1):
             return message.id
     except BadRequest as e:
-        print(f"Failed to fetch latest message ID: {e}")
+        logging.error(f"Failed to fetch latest message ID: {e}")
         return END_MESSAGE_ID  # Set a default value in case of failure
 
 async def update_end_message_id():
@@ -142,8 +146,13 @@ async def update_end_message_id():
         await asyncio.sleep(60)
 
 async def main():
+    logging.info("Starting the user client...")
     await app.start()
+    logging.info("User client started successfully.")
+    logging.info("Starting the bot client...")
     await bot.start()
+    logging.info("Bot client started successfully.")
+    
     try:
         asyncio.create_task(update_end_message_id())
         
