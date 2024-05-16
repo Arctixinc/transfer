@@ -26,7 +26,7 @@ STATUS_ID = 1881720028
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client[DB_NAME]
 collection = db[COLLECTION_NAME]
-progress_collection = db['progress_messages']
+progress_collection = db[PROGRESS_COLLECTION_NAME]
 
 # Initialize the Pyrogram Client
 app = Client("forward_bot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
@@ -41,13 +41,13 @@ async def forward_specific_message(message_id, total_files):
         await app.copy_message(chat_id=DESTINATION_CHANNEL_ID, from_chat_id=SOURCE_CHANNEL_ID, message_id=message_id)
         print(f"Successfully forwarded message {message_id} to {DESTINATION_CHANNEL_ID}")
 
-        # Calculate progress and send update every 5 seconds
+        # Calculate progress and send update every 10 messages
         if message_id % 10 == 0:  # Adjust this value as needed
             await send_progress_update(message_id, total_files)
 
         return True
     except errors.FloodWait as e:
-        await bot.send_message(chat_id=STATUS_ID, text=f"<b>😥 Pʟᴇᴀsᴇ Wᴀɪᴛ ᴅᴏɴ'ᴛ ᴅᴏ ғʟᴏᴏᴅɪɴɢ ᴡᴀɪᴛ ғᴏʀ {e.value} Sᴇᴄᴄᴏɴᴅs</b>")
+        await bot.send_message(chat_id=STATUS_ID, text=f"<b>😥 Pʟᴇᴀsᴇ Wᴀɪᴛ ᴅᴏɴ'ᴛ ғʟᴏᴏᴅ, ᴡᴀɪᴛ ғᴏʀ {e.value} sᴇᴄᴏɴᴅs</b>")
         print(f"Flood wait error: waiting for {e.value} seconds")
         await asyncio.sleep(e.value)
         await bot.send_message(chat_id=STATUS_ID, text=f"<b>Now Every Thing Ok</b>")
@@ -103,8 +103,7 @@ async def send_progress_update(current_file, total_files):
     except Exception as e:
         # Handle any other exceptions
         print(f"Error updating progress message: {e}")
-        
-            
+
 async def main():
     await app.start()
     await bot.start()
@@ -118,7 +117,6 @@ async def main():
             if success:
                 # Update the last processed message ID in MongoDB
                 collection.update_one({'_id': 1}, {'$set': {'last_processed_id': message_id}}, upsert=True)
-                
                 await asyncio.sleep(2)  # Adjust the duration (in seconds) as needed
             else:
                 print(f"Stopping the forwarding process due to failure at message {message_id}")
