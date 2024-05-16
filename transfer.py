@@ -151,6 +151,7 @@ async def main():
                 continue
 
             if (message_id - last_processed_id) % batch_size == 0:
+                logging.info(f"Batch of {batch_size} messages forwarded. Waiting for 3 seconds...")
                 await asyncio.sleep(3)  # Wait for 3 seconds after every batch of 10 messages
 
     finally:
