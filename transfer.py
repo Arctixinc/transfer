@@ -43,8 +43,9 @@ async def forward_specific_message(message_id, total_files):
     try:
         # Fetch the message from the source channel
         message = await app.get_messages(SOURCE_CHANNEL_ID, message_id)
+        
         # Forward the message to the destination channel
-        await app.copy_message(chat_id=DESTINATION_CHANNEL_ID, from_chat_id=SOURCE_CHANNEL_ID, message_id=message_id)
+        forwarded_message = await app.copy_message(chat_id=DESTINATION_CHANNEL_ID, from_chat_id=SOURCE_CHANNEL_ID, message_id=message_id)
         logging.info(f"Successfully forwarded message {message_id} to {DESTINATION_CHANNEL_ID}")
 
         # Calculate progress and send update every 10 messages
@@ -126,7 +127,7 @@ async def main():
     logging.info("Starting the bot client...")
     await bot.start()
     logging.info("Bot client started successfully.")
-
+    
     try:
         asyncio.create_task(update_end_message_id())
         
@@ -138,15 +139,20 @@ async def main():
         END_MESSAGE_ID = end_message_id
         collection.update_one({'_id': 1}, {'$set': {'end_message_id': END_MESSAGE_ID}}, upsert=True)
 
+        batch_size = 10
         for message_id in range(last_processed_id + 1, END_MESSAGE_ID + 1):
             success = await forward_specific_message(message_id, total_files=END_MESSAGE_ID)
             if success:
                 collection.update_one({'_id': 1}, {'$set': {'last_processed_id': message_id}}, upsert=True)
-                await asyncio.sleep(1)  # Adjust the duration (in seconds) as needed
             else:
+                logging.error(f"Skipping message {message_id} due to failure")
                 for progress_id in PROGRESS_ID:
                     await bot.send_message(chat_id=progress_id, text=f"Skipping message {message_id} due to failure")
                 continue
+
+            if (message_id - last_processed_id) % batch_size == 0:
+                await asyncio.sleep(3)  # Wait for 3 seconds after every batch of 10 messages
+
     finally:
         await app.stop()
         await bot.stop()
