@@ -22,7 +22,7 @@ DESTINATION_CHANNEL_ID = -1002084341815
 START_MESSAGE_ID = 1504
 END_MESSAGE_ID = 500000
 STATUS_ID = 1881720028
-PROGRESS_ID = [1881720028, -1002084341815]  # List of chat IDs where progress updates will be sent
+PROGRESS_ID = [1881720028, 5301275567, -1002084341815]  # List of chat IDs where progress updates will be sent
 
 # Initialize the MongoDB client
 mongo_client = MongoClient(MONGO_URI)
