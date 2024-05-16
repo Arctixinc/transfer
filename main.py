@@ -121,10 +121,26 @@ async def get_latest_message_id():
         print(f"Failed to fetch latest message ID: {e}")
         return END_MESSAGE_ID  # Set a default value in case of failure
 
+async def update_end_message_id():
+    global END_MESSAGE_ID
+    while True:
+        # Fetch the latest message ID from the source channel
+        end_message_id = await get_latest_message_id()
+
+        # Update the END_MESSAGE_ID variable
+        END_MESSAGE_ID = end_message_id
+
+        # Save the END_MESSAGE_ID in the database
+        collection.update_one({'_id': 1}, {'$set': {'end_message_id': END_MESSAGE_ID}}, upsert=True)
+
+        await asyncio.sleep(60)
+        
 async def main():
     await app.start()
     await bot.start()
     try:
+        asyncio.create_task(update_end_message_id())
+        
         # Fetch the last processed message ID from MongoDB
         status = collection.find_one({'_id': 1})
         last_processed_id = status['last_processed_id'] if status else START_MESSAGE_ID - 1
