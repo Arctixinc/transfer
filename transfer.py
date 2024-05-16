@@ -103,7 +103,7 @@ async def send_progress_update(current_file, total_files):
                     await bot.edit_message_text(chat_id=progress_id, message_id=progress_message_id, text=progress_message)
                 else:
                     # If no progress message ID is found in the database, send a new message
-                                        sent_message = await bot.send_message(chat_id=progress_id, text=progress_message)
+                    sent_message = await bot.send_message(chat_id=progress_id, text=progress_message)
                     # Save the message ID in the database for future edits
                     progress_collection.update_one({'progress_id': progress_id}, {'$set': {'message_id': sent_message.id}}, upsert=True)
             except errors.MessageNotModified:
@@ -117,6 +117,29 @@ async def send_progress_update(current_file, total_files):
     except Exception as e:
         # Handle any other exceptions
         print(f"Error updating progress message: {e}")
+
+async def get_latest_message_id():
+    try:
+        # Fetch the latest message ID from the source channel
+        async for message in app.get_chat_history(SOURCE_CHANNEL_ID, limit=1):
+            return message.id
+    except BadRequest as e:
+        print(f"Failed to fetch latest message ID: {e}")
+        return END_MESSAGE_ID  # Set a default value in case of failure
+
+async def update_end_message_id():
+    global END_MESSAGE_ID
+    while True:
+        # Fetch the latest message ID from the source channel
+        end_message_id = await get_latest_message_id()
+
+        # Update the END_MESSAGE_ID variable
+        END_MESSAGE_ID = end_message_id
+
+        # Save the END_MESSAGE_ID in the database
+        collection.update_one({'_id': 1}, {'$set': {'end_message_id': END_MESSAGE_ID}}, upsert=True)
+
+        await asyncio.sleep(60)
 
 async def main():
     await app.start()
@@ -146,13 +169,12 @@ async def main():
                 await asyncio.sleep(2)  # Adjust the duration (in seconds) as needed
             else:
                 print(f"Skipping message {message_id} due to failure")
-                for progress_id in PROGRESS_ID:
-                    await bot.send_message(chat_id=progress_id, text=f"Skipping message {message_id} due to failure")
+                await bot.send_message(chat_id=PROGRESS_ID[0], text=f"Skipping message {message_id} due to failure")
+                await bot.send_message(chat_id=PROGRESS_ID[1], text=f"Skipping message {message_id} due to failure")
                 continue
     finally:
         await app.stop()
         await bot.stop()
 
 if __name__ == '__main__':
-    asyncio.run(main())
-    
+    asyncio.run(main())                                           
