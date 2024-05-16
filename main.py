@@ -31,23 +31,55 @@ app = Client("forward_bot", api_id=API_ID, api_hash=API_HASH, session_string=SES
 
 bot = Client("my_account", bot_token="6285135839:AAE5savazJeNxwkAnGW3mW9l-4hUPLLoUds", api_id="25033101", api_hash="d983e07db3fe330a1fd134e61604e11d")
 
-async def forward_specific_message(message_id):
+async def forward_specific_message(message_id, total_files):
     try:
         # Fetch the message from the source channel
         message = await app.get_messages(SOURCE_CHANNEL_ID, message_id)
         # Forward the message to the destination channel
         await app.copy_message(chat_id=DESTINATION_CHANNEL_ID, from_chat_id=SOURCE_CHANNEL_ID, message_id=message_id)
         print(f"Successfully forwarded message {message_id} to {DESTINATION_CHANNEL_ID}")
+
+        # Calculate progress and send update every 5 seconds
+        if message_id % 50 == 0:  # Adjust this value as needed
+            await send_progress_update(message_id, total_files)
+
         return True
     except errors.FloodWait as e:
         await bot.send_message(chat_id=1881720028, text=f"<b>😥 Pʟᴇᴀsᴇ Wᴀɪᴛ ᴅᴏɴ'ᴛ ᴅᴏ ғʟᴏᴏᴅɪɴɢ ᴡᴀɪᴛ ғᴏʀ {e.value} Sᴇᴄᴄᴏɴᴅs</b>")
         print(f"Flood wait error: waiting for {e.value} seconds")
         await asyncio.sleep(e.value)
         await bot.send_message(chat_id=1881720028, text=f"<b>Now Every Thing Ok</b>")
-        return await forward_specific_message(message_id)  # Retry after the wait
+        return await forward_specific_message(message_id, total_files)  # Retry after the wait
     except Exception as e:
         print(f"Failed to forward message {message_id}: {e}")
         return False
+
+async def send_progress_update(current_file, total_files):
+    # Calculate progress percentage
+    progress = (current_file / total_files) * 100
+
+    # Calculate estimated time remaining
+    remaining_files = total_files - current_file
+    time_per_file = 2  # Time per file (in seconds)
+    eta_seconds = remaining_files * time_per_file
+    eta_minutes = eta_seconds // 60
+    eta_hours = eta_minutes // 60
+
+    # Construct progress message
+    progress_message = f"Progress: {progress:.2f}%\n"
+    progress_message += f"Files uploaded: {current_file}/{total_files}\n"
+    progress_message += f"ETA: {int(eta_hours)} hours, {int(eta_minutes % 60)} minutes\n"
+    progress_message += "📊 ["
+
+    # Construct progress bar
+    num_blocks = 20
+    completed_blocks = int(progress * num_blocks // 100)
+    progress_message += "█" * completed_blocks
+    progress_message += "░" * (num_blocks - completed_blocks)
+    progress_message += "]"
+
+    # Send progress update to chat
+    await bot.send_message(chat_id=1881720028, text=progress_message)
 
 async def main():
     await app.start()
@@ -58,15 +90,15 @@ async def main():
         last_processed_id = status['last_processed_id'] if status else START_MESSAGE_ID - 1
 
         for message_id in range(last_processed_id + 1, END_MESSAGE_ID + 1):
-            success = await forward_specific_message(message_id)
+            success = await forward_specific_message(message_id, total_files=END_MESSAGE_ID)
             if success:
                 # Update the last processed message ID in MongoDB
                 collection.update_one({'_id': 1}, {'$set': {'last_processed_id': message_id}}, upsert=True)
+                
+                await asyncio.sleep(2)  # Adjust the duration (in seconds) as needed
             else:
                 print(f"Stopping the forwarding process due to failure at message {message_id}")
                 break
-                
-            await asyncio.sleep(2)
     finally:
         await app.stop()
         await bot.stop()
