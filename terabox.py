@@ -50,10 +50,10 @@ async def forward_specific_message(message_id, total_files):
 
         return True
     except errors.FloodWait as e:
-        await bot.send_message(chat_id=STATUS_ID, text=f"<b>😥 Please wait {e.value} seconds due to flood wait.</b>")
+        msg = await bot.send_message(chat_id=STATUS_ID, text=f"<b>😥 Please wait {e.value} seconds due to flood wait.</b>")
         logging.warning(f"Flood wait error: waiting for {e.value} seconds")
         await asyncio.sleep(e.value)
-        await bot.send_message(chat_id=STATUS_ID, text=f"<b>Everything is okay now.</b>")
+        await msg.edit("<b>Everything is okay now.</b>")
         return await forward_specific_message(message_id, total_files)  # Retry after the wait
     except Exception as e:
         logging.error(f"Failed to forward message {message_id}: {e}")
