@@ -14,7 +14,7 @@ API_HASH = os.getenv('API_HASH', '32b6f41a4bf740efed2d4ce911f145c7')
 SESSION_STRING = os.getenv('SESSION_STRING', "BABJMj4AGCeKymng4c-AKeDUi-fimjX1D0QPAlh98yjnbtCU5y_VPM7-tjMSKoKWsQ9PZhAYDtnSgld9XHoVyq0w_eMuL80JcEzpJCXLTRe3yrRf-ibsD_Pb4Mbs6D7ubWVlx1Zw5z0q2SmLUrMRz9BtqzCaL8pXsoySRtL87k1NbK8u9UWpQG45ECIu6qd49dx8Q_uIdnJIUkFQrqnDRtioVmPZDSGH-gF7US85Rqk9wDeRkYXwqKzjfmLScDmiSDh2eUmrvvQDRLYI1r5dchKhRroc4hg5YRtRQjfMBn0DWaWwhwXYZnZ31L-kWl59miQG4jNPfB2CbQAV-3WkPtqj71nEpAAAAAGg0cHLAQ")
 
 # MongoDB configuration
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb+srv://abcd:abcd@personalproject.mxx6dgi.mongodb.net/?retryWrites=true&w=majority)
+MONGO_URI = os.getenv('MONGO_URI', 'mongodb+srv://abcd:abcd@personalproject.mxx6dgi.mongodb.net/?retryWrites=true&w=majority')
 DB_NAME = 'forward_bot_db'
 COLLECTION_NAME = 'message_status'
 PROGRESS_COLLECTION_NAME = 'progress_messages'
