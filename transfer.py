@@ -11,7 +11,8 @@ logging.basicConfig(level=logging.INFO)
 # Environment variables for sensitive data
 API_ID = int(os.getenv('API_ID', 4796990))              
 API_HASH = os.getenv('API_HASH', '32b6f41a4bf740efed2d4ce911f145c7')
-SESSION_STRING = os.getenv('SESSION_STRING', "BAGNSRsAB0CleNj3Xk-t2nqPUAJpMrChIKhk5GgGCr3MyWReVJaczWe96GhJB9g39y_-vdVrjr4BOrxTMkmFHRwjWS0-c7AC2bzJzjVjFZJYSFfGWjsK1qr-EB2cwTI6J6hsFQyyU4FHJuvQvy2EFfIw0Yhop0W89aR9HKN9fiwk6cDa4aODS-HvrY-mwvjBvL67KdHx1sxELISlc0Q8G8bAkQ1Qu4KSLhQ4wSEe5l6k33vTbM_t3eRgUzL9l1-ramwxHVD2t8KfC065gbFj8W3pDodldGa-O298PPwclFXkJssRWFqOt8KOhoPBxLH0zV8RolUtBGBy6JvE29HtogjBO8AGFQAAAAF01KpnAA")
+#SESSION_STRING = os.getenv('SESSION_STRING', "BAGNSRsAB0CleNj3Xk-t2nqPUAJpMrChIKhk5GgGCr3MyWReVJaczWe96GhJB9g39y_-vdVrjr4BOrxTMkmFHRwjWS0-c7AC2bzJzjVjFZJYSFfGWjsK1qr-EB2cwTI6J6hsFQyyU4FHJuvQvy2EFfIw0Yhop0W89aR9HKN9fiwk6cDa4aODS-HvrY-mwvjBvL67KdHx1sxELISlc0Q8G8bAkQ1Qu4KSLhQ4wSEe5l6k33vTbM_t3eRgUzL9l1-ramwxHVD2t8KfC065gbFj8W3pDodldGa-O298PPwclFXkJssRWFqOt8KOhoPBxLH0zV8RolUtBGBy6JvE29HtogjBO8AGFQAAAAF01KpnAA")
+SESSION_STRING = os.getenv('SESSION_STRING', "BABJMj4AGCeKymng4c-AKeDUi-fimjX1D0QPAlh98yjnbtCU5y_VPM7-tjMSKoKWsQ9PZhAYDtnSgld9XHoVyq0w_eMuL80JcEzpJCXLTRe3yrRf-ibsD_Pb4Mbs6D7ubWVlx1Zw5z0q2SmLUrMRz9BtqzCaL8pXsoySRtL87k1NbK8u9UWpQG45ECIu6qd49dx8Q_uIdnJIUkFQrqnDRtioVmPZDSGH-gF7US85Rqk9wDeRkYXwqKzjfmLScDmiSDh2eUmrvvQDRLYI1r5dchKhRroc4hg5YRtRQjfMBn0DWaWwhwXYZnZ31L-kWl59miQG4jNPfB2CbQAV-3WkPtqj71nEpAAAAAGg0cHLAQ")
 
 # MongoDB configuration
 MONGO_URI = os.getenv('MONGO_URI', 'mongodb+srv://abcd:abcd@personalproject.mxx6dgi.mongodb.net/?retryWrites=true&w=majority')
