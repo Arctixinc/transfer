@@ -25,7 +25,7 @@ DESTINATION_CHANNEL_ID = -1002084341815
 
 # Start and End Message IDs to forward
 START_MESSAGE_ID = 1504
-END_MESSAGE_ID = 583881
+DEFAULT_END_MESSAGE_ID = 583881
 STATUS_ID = 1881720028
 PROGRESS_ID = [1881720028, 5301275567, -1002084341815]  # List of chat IDs where progress updates will be sent
 
@@ -38,7 +38,6 @@ progress_collection = db[PROGRESS_COLLECTION_NAME]
 # Initialize the Pyrogram Client
 app = Client("forward_bot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 bot = Client("my_account", bot_token="6285135839:AAE5savazJeNxwkAnGW3mW9l-4hUPLLoUds", api_id="25033101", api_hash="d983e07db3fe330a1fd134e61604e11d")
-
 async def forward_specific_message(message_id, total_files):
     try:
         message = await app.get_messages(SOURCE_CHANNEL_ID, message_id)
@@ -111,11 +110,13 @@ async def main():
     try:
         status = collection.find_one({'_id': 1})
         last_processed_id = status['last_processed_id'] if status else START_MESSAGE_ID - 1
+        end_message_id = status['end_message_id'] if status and 'end_message_id' in status else DEFAULT_END_MESSAGE_ID
 
-        total_files = END_MESSAGE_ID - START_MESSAGE_ID + 1
+        # Save the end message ID to the database if not already present
+        collection.update_one({'_id': 1}, {'$set': {'end_message_id': end_message_id}}, upsert=True)
 
-        for message_id in range(last_processed_id + 1, END_MESSAGE_ID + 1):
-            success = await forward_specific_message(message_id, total_files=total_files)
+        for message_id in range(last_processed_id + 1, end_message_id + 1):
+            success = await forward_specific_message(message_id, total_files=end_message_id)
             if success:
                 collection.update_one({'_id': 1}, {'$set': {'last_processed_id': message_id}}, upsert=True)
                 await asyncio.sleep(1)  # Adjust the duration (in seconds) as needed
@@ -129,4 +130,3 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
-  
