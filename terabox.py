@@ -61,7 +61,7 @@ async def forward_specific_message(message_id, total_files):
 async def send_progress_update(current_file, total_files):
     progress = (current_file / total_files) * 100
     remaining_files = total_files - current_file
-    time_per_file = 1  # Adjust this value based on actual performance
+    time_per_file = 2  # Adjust this value based on actual performance
     eta_seconds = remaining_files * time_per_file
 
     eta_days = eta_seconds // 86400
@@ -111,15 +111,16 @@ async def main():
         status = collection.find_one({'_id': 1})
         last_processed_id = status['last_processed_id'] if status else START_MESSAGE_ID - 1
         end_message_id = status['end_message_id'] if status and 'end_message_id' in status else DEFAULT_END_MESSAGE_ID
-
-        # Save the end message ID to the database if not already present
-        collection.update_one({'_id': 1}, {'$set': {'end_message_id': end_message_id}}, upsert=True)
+        
+        if DEFAULT_END_MESSAGE_ID > end_message_id:
+            end_message_id = DEFAULT_END_MESSAGE_ID
+            collection.update_one({'_id': 1}, {'$set': {'end_message_id': end_message_id}}, upsert=True)
 
         for message_id in range(last_processed_id + 1, end_message_id + 1):
             success = await forward_specific_message(message_id, total_files=end_message_id)
             if success:
                 collection.update_one({'_id': 1}, {'$set': {'last_processed_id': message_id}}, upsert=True)
-                await asyncio.sleep(1)  # Adjust the duration (in seconds) as needed
+                await asyncio.sleep(2)  # Adjust the duration (in seconds) as needed
             else:
                 for progress_id in PROGRESS_ID:
                     await bot.send_message(chat_id=progress_id, text=f"Skipping message {message_id} due to failure")
