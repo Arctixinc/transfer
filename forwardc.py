@@ -36,6 +36,10 @@ mongo_client = MongoClient(MONGO_URI)
 db = mongo_client[DB_NAME]
 collection = db[COLLECTION_NAME]
 
+# Define the new _id value
+GLOBAL_DATA_ID = 1
+
+
 # Initialize the Pyrogram Client
 app = Client("forward_bot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 bot = Client("my_account", bot_token=BOT_TOKEN, api_id=BOT_API_ID, api_hash=BOT_API_HASH)
@@ -138,7 +142,7 @@ async def update_end_message_id():
     global END_MESSAGE_ID
     while True:
         END_MESSAGE_ID = await get_latest_message_id(MESSAGE_BOT_TOKEN, SOURCE_CHANNEL_ID)
-        collection.update_one({'_id': 1}, {'$set': {'end_message_id': END_MESSAGE_ID}}, upsert=True)
+        collection.update_one({'_id': GLOBAL_DATA_ID}, {'$set': {'end_message_id': END_MESSAGE_ID}}, upsert=True)
         await asyncio.sleep(60)
 
 async def main():
@@ -152,17 +156,17 @@ async def main():
     try:
         asyncio.create_task(update_end_message_id())
         
-        status = collection.find_one({'_id': 1})
+        status = collection.find_one({'_id': GLOBAL_DATA_ID})
         last_processed_id = status['last_processed_id'] if status else START_MESSAGE_ID - 1
 
         global END_MESSAGE_ID
         END_MESSAGE_ID = await get_latest_message_id(MESSAGE_BOT_TOKEN, SOURCE_CHANNEL_ID)
-        collection.update_one({'_id': 1}, {'$set': {'end_message_id': END_MESSAGE_ID}}, upsert=True)
-
+        collection.update_one({'_id': GLOBAL_DATA_ID}, {'$set': {'end_message_id': END_MESSAGE_ID}}, upsert=True)
+        
         for message_id in range(last_processed_id + 1, END_MESSAGE_ID + 1):
             success = await forward_specific_message(message_id, total_files=END_MESSAGE_ID)
             if success:
-                collection.update_one({'_id': 1}, {'$set': {'last_processed_id': message_id}}, upsert=True)
+                collection.update_one({'_id': GLOBAL_DATA_ID}, {'$set': {'last_processed_id': message_id}}, upsert=True)
                 await asyncio.sleep(2)
             else:
                 for progress_id in PROGRESS_IDS:
