@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 API_ID = int(os.getenv('API_ID'))
 API_HASH = os.getenv('API_HASH')
 SESSION_STRING = os.getenv('SESSION_STRING')
-BOT_API_ID = os.getenv('BOT_API_ID')
+BOT_API_ID = int(os.getenv('BOT_API_ID'))
 BOT_API_HASH = os.getenv('BOT_API_HASH')
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 MONGO_URI = os.getenv('MONGO_URI')
@@ -116,12 +116,21 @@ async def update_progress_message(progress_id, progress_message):
         update_progress_messages(progress_id, sent_message.id)
 
 def update_progress_messages(progress_id, message_id):
-    # Update the progress message ID in the database for the given progress ID
-    collection.update_one(
-        {'_id': GLOBAL_DATA_ID, 'progress_messages.progress_id': progress_id},
-        {'$set': {'progress_messages.$.message_id': message_id}},
-        upsert=True
-    )
+    # Check if the progress_id exists in the database
+    if collection.find_one({'_id': GLOBAL_DATA_ID, 'progress_messages.progress_id': progress_id}):
+        # Update the existing progress message ID
+        collection.update_one(
+            {'_id': GLOBAL_DATA_ID, 'progress_messages.progress_id': progress_id},
+            {'$set': {'progress_messages.$.message_id': message_id}},
+            upsert=True
+        )
+    else:
+        # Add a new progress message ID
+        collection.update_one(
+            {'_id': GLOBAL_DATA_ID},
+            {'$push': {'progress_messages': {'progress_id': progress_id, 'message_id': message_id}}},
+            upsert=True
+        )
 
 def get_progress_message_id(progress_id):
     # Retrieve the progress message ID for the given progress ID from the database
@@ -160,3 +169,4 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+    
