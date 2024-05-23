@@ -32,9 +32,9 @@ bot_logger.setLevel(logging.INFO)
 user_handler = logging.StreamHandler()
 bot_handler = logging.StreamHandler()
 
-# Create formatters and add them to the handlers
-user_formatter = logging.Formatter('%(asctime)s - USER - %(levelname)s - %(message)s')
-bot_formatter = logging.Formatter('%(asctime)s - BOT - %(levelname)s - %(message)s')
+# Create formatters with 12-hour time format and add them to the handlers
+user_formatter = logging.Formatter('%(asctime)s - USER - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %I:%M:%S %p')
+bot_formatter = logging.Formatter('%(asctime)s - BOT - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %I:%M:%S %p')
 user_handler.setFormatter(user_formatter)
 bot_handler.setFormatter(bot_formatter)
 
