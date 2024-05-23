@@ -36,16 +36,17 @@ collection = db[COLLECTION_NAME]
 # Define the new _id value
 GLOBAL_DATA_ID = 2
 
-# Default data for progress_messages
-#DEFAULT_PROGRESS_MESSAGES = [
-#    {'progress_id': 1881720028, 'message_id': 418},
-#    {'progress_id': 5301275567, 'message_id': 420},
-#    {'progress_id': -1002084341815, 'message_id': 21136}
-#]
 
-# Check if the collection is empty, and if so, insert the default data
-#if collection.count_documents({}) == 0:
-#    collection.insert_one({'_id': GLOBAL_DATA_ID, 'last_processed_id': 0, 'end_message_id': 0, 'progress_messages': DEFAULT_PROGRESS_MESSAGES})
+# Default data for progress_messages
+# DEFAULT_PROGRESS_MESSAGES = [
+    # {'progress_id': 1881720028, 'message_id': 418},
+    # {'progress_id': 5301275567, 'message_id': 420},
+    # {'progress_id': -1002084341815, 'message_id': 21136}
+# ]
+
+# # Check if the collection is empty, and if so, insert the default data
+# if collection.count_documents({}) == 0:
+    # collection.insert_one({'_id': GLOBAL_DATA_ID, 'last_processed_id': 0, 'end_message_id': 0, 'progress_messages': DEFAULT_PROGRESS_MESSAGES})
 
 # Initialize the Pyrogram Client
 app = Client("forward_bot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
@@ -64,7 +65,11 @@ async def forward_specific_message(message_id, total_files):
         logging.warning(f"Flood wait error: waiting for {e.value} seconds")
         await asyncio.sleep(e.value)
         return await forward_specific_message(message_id, total_files)
-    except Exception as e:
+    except errors.RPCError as e:
+        if e.CODE == 500 and "INTERDC_X_CALL_RICH_ERROR" in str(e):
+            logging.warning(f"INTERDC_X_CALL_RICH_ERROR: Retrying message {message_id} after 5 seconds")
+            await asyncio.sleep(5)
+            return await forward_specific_message(message_id, total_files)
         logging.error(f"Failed to forward message {message_id}: {e}")
         return False
 
@@ -154,6 +159,9 @@ async def main():
         last_processed_id = status['last_processed_id'] if status else START_MESSAGE_ID - 1
         end_message_id = status['end_message_id'] if status and 'end_message_id' in status else END_MESSAGE_ID
 
+        # Update end_message_id in the database
+        collection.update_one({'_id': GLOBAL_DATA_ID}, {'$set': {'end_message_id': end_message_id}}, upsert=True)
+
         for message_id in range(last_processed_id + 1, end_message_id + 1):
             success = await forward_specific_message(message_id, total_files=end_message_id)
             if success:
@@ -169,4 +177,3 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
-    
