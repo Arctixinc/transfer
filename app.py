@@ -9,7 +9,8 @@ from pyrogram.errors import BadRequest
 logging.basicConfig(level=logging.INFO)
 
 # Environment variables for sensitive data
-API_ID = int(os.getenv('API_ID', '4796990'))
+message_bot_token = "7077404988:AAHWWM5WuJuoNd9SfrXROtMZJdlekbLh5Tg"
+API_ID = int(os.getenv('API_ID', '4796990'))             
 API_HASH = os.getenv('API_HASH', '32b6f41a4bf740efed2d4ce911f145c7')
 SESSION_STRING = os.getenv('SESSION_STRING', "BABJMj4AGCeKymng4c-AKeDUi-fimjX1D0QPAlh98yjnbtCU5y_VPM7-tjMSKoKWsQ9PZhAYDtnSgld9XHoVyq0w_eMuL80JcEzpJCXLTRe3yrRf-ibsD_Pb4Mbs6D7ubWVlx1Zw5z0q2SmLUrMRz9BtqzCaL8pXsoySRtL87k1NbK8u9UWpQG45ECIu6qd49dx8Q_uIdnJIUkFQrqnDRtioVmPZDSGH-gF7US85Rqk9wDeRkYXwqKzjfmLScDmiSDh2eUmrvvQDRLYI1r5dchKhRroc4hg5YRtRQjfMBn0DWaWwhwXYZnZ31L-kWl59miQG4jNPfB2CbQAV-3WkPtqj71nEpAAAAAGg0cHLAQ")
 
@@ -25,7 +26,7 @@ DESTINATION_CHANNEL_ID = -1002084341815
 
 # Start and End Message IDs to forward
 START_MESSAGE_ID = 1504
-DEFAULT_END_MESSAGE_ID = 682183
+END_MESSAGE_ID = 500000
 STATUS_ID = 1881720028
 PROGRESS_ID = [1881720028, 5301275567, -1002084341815]  # List of chat IDs where progress updates will be sent
 
@@ -38,13 +39,17 @@ progress_collection = db[PROGRESS_COLLECTION_NAME]
 # Initialize the Pyrogram Client
 app = Client("forward_bot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 bot = Client("my_account", bot_token="6285135839:AAE5savazJeNxwkAnGW3mW9l-4hUPLLoUds", api_id="25033101", api_hash="d983e07db3fe330a1fd134e61604e11d")
+
 async def forward_specific_message(message_id, total_files):
     try:
+        # Fetch the message from the source channel
         message = await app.get_messages(SOURCE_CHANNEL_ID, message_id)
+        # Forward the message to the destination channel
         await app.copy_message(chat_id=DESTINATION_CHANNEL_ID, from_chat_id=SOURCE_CHANNEL_ID, message_id=message_id)
         logging.info(f"Successfully forwarded message {message_id} to {DESTINATION_CHANNEL_ID}")
 
-        if message_id % 10 == 0:  # Progress update interval
+        # Calculate progress and send update every 10 messages
+        if message_id % 10 == 0:  # Adjust this value as needed
             await send_progress_update(message_id, total_files)
 
         return True
@@ -99,6 +104,27 @@ async def send_progress_update(current_file, total_files):
     except Exception as e:
         logging.error(f"Error updating progress message: {e}")
 
+async def get_latest_message_id(bot_token, source_channel_id):
+    try:
+        response = requests.get(f"https://api.telegram.org/bot{bot_token}/getUpdates").json()
+        for result in response.get('result', []):
+            if 'channel_post' in result:
+                channel_post = result['channel_post']
+                if channel_post['chat']['id'] == int(source_channel_id):
+                    return channel_post['message_id']
+        return END_MESSAGE_ID
+    except requests.RequestException as e:
+        logging.error(f"Failed to fetch latest message ID: {e}")
+        return END_MESSAGE_ID
+
+async def update_end_message_id():
+    global END_MESSAGE_ID
+    while True:
+        end_message_id = await get_latest_message_id(message_bot_token, SOURCE_CHANNEL_ID)
+        END_MESSAGE_ID = end_message_id
+        collection.update_one({'_id': 1}, {'$set': {'end_message_id': END_MESSAGE_ID}}, upsert=True)
+        await asyncio.sleep(60)
+
 async def main():
     logging.info("Starting the user client...")
     await app.start()
@@ -108,19 +134,21 @@ async def main():
     logging.info("Bot client started successfully.")
 
     try:
+        asyncio.create_task(update_end_message_id())
+        
         status = collection.find_one({'_id': 1})
         last_processed_id = status['last_processed_id'] if status else START_MESSAGE_ID - 1
-        end_message_id = status['end_message_id'] if status and 'end_message_id' in status else DEFAULT_END_MESSAGE_ID
-        
-        if DEFAULT_END_MESSAGE_ID > end_message_id:
-            end_message_id = DEFAULT_END_MESSAGE_ID
-            collection.update_one({'_id': 1}, {'$set': {'end_message_id': end_message_id}}, upsert=True)
 
-        for message_id in range(last_processed_id + 1, end_message_id + 1):
-            success = await forward_specific_message(message_id, total_files=end_message_id)
+        end_message_id = await get_latest_message_id()
+        global END_MESSAGE_ID
+        END_MESSAGE_ID = end_message_id
+        collection.update_one({'_id': 1}, {'$set': {'end_message_id': END_MESSAGE_ID}}, upsert=True)
+
+        for message_id in range(last_processed_id + 1, END_MESSAGE_ID + 1):
+            success = await forward_specific_message(message_id, total_files=END_MESSAGE_ID)
             if success:
                 collection.update_one({'_id': 1}, {'$set': {'last_processed_id': message_id}}, upsert=True)
-                await asyncio.sleep(2)  # Adjust the duration (in seconds) as needed
+                await asyncio.sleep(2)
             else:
                 for progress_id in PROGRESS_ID:
                     await bot.send_message(chat_id=progress_id, text=f"Skipping message {message_id} due to failure")
