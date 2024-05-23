@@ -1,6 +1,8 @@
 import logging
 import asyncio
 import os
+from datetime import datetime
+from pytz import timezone
 from pyrogram import Client, errors
 from pymongo import MongoClient
 from dotenv import load_dotenv
@@ -8,8 +10,37 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+# Timezone configuration
+TIMEZONE = 'Asia/Kolkata'
+
+# Function to set timezone for logging
+def changetz(*args):
+    return datetime.now(timezone(TIMEZONE)).timetuple()
+
+# Set timezone for logging
+logging.Formatter.converter = changetz
+
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+user_logger = logging.getLogger("user_client")
+bot_logger = logging.getLogger("bot_client")
+
+# Set logging level
+user_logger.setLevel(logging.INFO)
+bot_logger.setLevel(logging.INFO)
+
+# Create console handlers
+user_handler = logging.StreamHandler()
+bot_handler = logging.StreamHandler()
+
+# Create formatters and add them to the handlers
+user_formatter = logging.Formatter('%(asctime)s - USER - %(levelname)s - %(message)s')
+bot_formatter = logging.Formatter('%(asctime)s - BOT - %(levelname)s - %(message)s')
+user_handler.setFormatter(user_formatter)
+bot_handler.setFormatter(bot_formatter)
+
+# Add handlers to the loggers
+user_logger.addHandler(user_handler)
+bot_logger.addHandler(bot_handler)
 
 # Environment variables for sensitive data
 API_ID = int(os.getenv('API_ID'))
@@ -36,18 +67,6 @@ collection = db[COLLECTION_NAME]
 # Define the new _id value
 GLOBAL_DATA_ID = int(os.getenv('GLOBAL_DATA_ID'))
 
-
-# Default data for progress_messages
-# DEFAULT_PROGRESS_MESSAGES = [
-    # {'progress_id': 1881720028, 'message_id': 418},
-    # {'progress_id': 5301275567, 'message_id': 420},
-    # {'progress_id': -1002084341815, 'message_id': 21136}
-# ]
-
-# # Check if the collection is empty, and if so, insert the default data
-# if collection.count_documents({}) == 0:
-    # collection.insert_one({'_id': GLOBAL_DATA_ID, 'last_processed_id': 0, 'end_message_id': 0, 'progress_messages': DEFAULT_PROGRESS_MESSAGES})
-
 # Initialize the Pyrogram Client
 app = Client("forward_bot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 bot = Client("my_account", bot_token=BOT_TOKEN, api_id=BOT_API_ID, api_hash=BOT_API_HASH)
@@ -56,21 +75,21 @@ async def forward_specific_message(message_id, total_files):
     try:
         message = await app.get_messages(SOURCE_CHANNEL_ID, message_id)
         await app.copy_message(chat_id=DESTINATION_CHANNEL_ID, from_chat_id=SOURCE_CHANNEL_ID, message_id=message_id)
-        logging.info(f"Successfully forwarded message {message_id} to {DESTINATION_CHANNEL_ID}")
+        user_logger.info(f"Successfully forwarded message {message_id} to {DESTINATION_CHANNEL_ID}")
 
         if message_id % 10 == 0:
             await send_progress_update(message_id, total_files)
         return True
     except errors.FloodWait as e:
-        logging.warning(f"Flood wait error: waiting for {e.value} seconds")
+        user_logger.warning(f"Flood wait error: waiting for {e.value} seconds")
         await asyncio.sleep(e.value)
         return await forward_specific_message(message_id, total_files)
     except errors.RPCError as e:
         if e.CODE == 500 and "INTERDC_X_CALL_RICH_ERROR" in str(e):
-            logging.warning(f"INTERDC_X_CALL_RICH_ERROR: Retrying message {message_id} after 5 seconds")
+            user_logger.warning(f"INTERDC_X_CALL_RICH_ERROR: Retrying message {message_id} after 5 seconds")
             await asyncio.sleep(5)
             return await forward_specific_message(message_id, total_files)
-        logging.error(f"Failed to forward message {message_id}: {e}")
+        user_logger.error(f"Failed to forward message {message_id}: {e}")
         return False
 
 async def send_progress_update(current_file, total_files):
@@ -95,7 +114,7 @@ async def send_progress_update(current_file, total_files):
         try:
             await update_progress_message(progress_id, progress_message)
         except Exception as e:
-            logging.error(f"Error updating progress message for {progress_id}: {e}")
+            bot_logger.error(f"Error updating progress message for {progress_id}: {e}")
 
 def calculate_eta(eta_seconds):
     eta_days = eta_seconds // 86400
@@ -121,16 +140,13 @@ async def update_progress_message(progress_id, progress_message):
         update_progress_messages(progress_id, sent_message.id)
 
 def update_progress_messages(progress_id, message_id):
-    # Check if the progress_id exists in the database
     if collection.find_one({'_id': GLOBAL_DATA_ID, 'progress_messages.progress_id': progress_id}):
-        # Update the existing progress message ID
         collection.update_one(
             {'_id': GLOBAL_DATA_ID, 'progress_messages.progress_id': progress_id},
             {'$set': {'progress_messages.$.message_id': message_id}},
             upsert=True
         )
     else:
-        # Add a new progress message ID
         collection.update_one(
             {'_id': GLOBAL_DATA_ID},
             {'$push': {'progress_messages': {'progress_id': progress_id, 'message_id': message_id}}},
@@ -138,7 +154,6 @@ def update_progress_messages(progress_id, message_id):
         )
 
 def get_progress_message_id(progress_id):
-    # Retrieve the progress message ID for the given progress ID from the database
     status = collection.find_one({'_id': GLOBAL_DATA_ID})
     if status and 'progress_messages' in status:
         for progress_message in status['progress_messages']:
@@ -147,19 +162,18 @@ def get_progress_message_id(progress_id):
     return None
 
 async def main():
-    logging.info("Starting the user client...")
+    user_logger.info("Starting the user client...")
     await app.start()
-    logging.info("User client started successfully.")
-    logging.info("Starting the bot client...")
+    user_logger.info("User client started successfully.")
+    bot_logger.info("Starting the bot client...")
     await bot.start()
-    logging.info("Bot client started successfully.")
+    bot_logger.info("Bot client started successfully.")
 
     try:
         status = collection.find_one({'_id': GLOBAL_DATA_ID})
         last_processed_id = status['last_processed_id'] if status else START_MESSAGE_ID - 1
         end_message_id = status['end_message_id'] if status and 'end_message_id' in status else END_MESSAGE_ID
 
-        # Update end_message_id in the database
         collection.update_one({'_id': GLOBAL_DATA_ID}, {'$set': {'end_message_id': end_message_id}}, upsert=True)
 
         for message_id in range(last_processed_id + 1, end_message_id + 1):
