@@ -139,7 +139,7 @@ async def main():
         status = collection.find_one({'_id': 1})
         last_processed_id = status['last_processed_id'] if status else START_MESSAGE_ID - 1
 
-        end_message_id = await get_latest_message_id()
+        end_message_id = get_latest_message_id(message_bot_token, SOURCE_CHANNEL_ID)
         global END_MESSAGE_ID
         END_MESSAGE_ID = end_message_id
         collection.update_one({'_id': 1}, {'$set': {'end_message_id': END_MESSAGE_ID}}, upsert=True)
