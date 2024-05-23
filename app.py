@@ -1,4 +1,5 @@
 import logging
+import requests
 import asyncio
 import os
 from pyrogram import Client, errors
