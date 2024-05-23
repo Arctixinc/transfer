@@ -2,11 +2,12 @@ import logging
 import requests
 import asyncio
 import os
-from dotenv import load_dotenv
 from pyrogram import Client, errors
 from pymongo import MongoClient
 from pyrogram.errors import BadRequest
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
 load_dotenv()
 
 # Configure logging
@@ -20,28 +21,20 @@ SESSION_STRING = os.getenv('SESSION_STRING')
 BOT_API_ID = os.getenv('BOT_API_ID')
 BOT_API_HASH = os.getenv('BOT_API_HASH')
 BOT_TOKEN = os.getenv('BOT_TOKEN')
-
-# MongoDB configuration
 MONGO_URI = os.getenv('MONGO_URI')
 DB_NAME = 'forward_bot_db'
-COLLECTION_NAME = 'message_status'
-PROGRESS_COLLECTION_NAME = 'progress_messages'
-
-# Channel IDs
+COLLECTION_NAME = 'message_forwarding_status'
 SOURCE_CHANNEL_ID = int(os.getenv('SOURCE_CHANNEL_ID'))
 DESTINATION_CHANNEL_ID = int(os.getenv('DESTINATION_CHANNEL_ID'))
-
-# Start and End Message IDs to forward
 START_MESSAGE_ID = int(os.getenv('START_MESSAGE_ID', 1))
 END_MESSAGE_ID = int(os.getenv('END_MESSAGE_ID', 500000))
 STATUS_ID = int(os.getenv('STATUS_ID'))
-PROGRESS_IDS = list(map(int, os.getenv('PROGRESS_IDS').split(',')))  # List of chat IDs where progress updates will be sent
+PROGRESS_IDS = list(map(int, os.getenv('PROGRESS_IDS').split(',')))
 
 # Initialize the MongoDB client
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client[DB_NAME]
 collection = db[COLLECTION_NAME]
-progress_collection = db[PROGRESS_COLLECTION_NAME]
 
 # Initialize the Pyrogram Client
 app = Client("forward_bot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
@@ -99,18 +92,32 @@ def calculate_eta(eta_seconds):
 
 async def update_progress_message(progress_id, progress_message):
     try:
-        progress_doc = progress_collection.find_one({'progress_id': progress_id})
-        if progress_doc:
-            progress_message_id = progress_doc['message_id']
+        progress_message_id = get_progress_message_id(progress_id)
+        if progress_message_id:
             await bot.edit_message_text(chat_id=progress_id, message_id=progress_message_id, text=progress_message)
         else:
             sent_message = await bot.send_message(chat_id=progress_id, text=progress_message)
-            progress_collection.update_one({'progress_id': progress_id}, {'$set': {'message_id': sent_message.id}}, upsert=True)
+            update_progress_messages(progress_id, sent_message.id)
     except errors.MessageNotModified:
         pass
     except errors.MessageIdInvalid:
         sent_message = await bot.send_message(chat_id=progress_id, text=progress_message)
-        progress_collection.update_one({'progress_id': progress_id}, {'$set': {'message_id': sent_message.id}}, upsert=True)
+        update_progress_messages(progress_id, sent_message.id)
+
+def update_progress_messages(progress_id, message_id):
+    collection.update_one(
+        {'_id': 1, 'progress_messages.progress_id': progress_id},
+        {'$set': {'progress_messages.$.message_id': message_id}},
+        upsert=True
+    )
+
+def get_progress_message_id(progress_id):
+    status = collection.find_one({'_id': 1})
+    if status and 'progress_messages' in status:
+        for progress_message in status['progress_messages']:
+            if progress_message['progress_id'] == progress_id:
+                return progress_message['message_id']
+    return None
 
 async def get_latest_message_id(bot_token, source_channel_id):
     try:
