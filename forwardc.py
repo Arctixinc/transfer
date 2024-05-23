@@ -119,15 +119,36 @@ def get_progress_message_id(progress_id):
                 return progress_message['message_id']
     return None
 
+# async def get_latest_message_id(bot_token, source_channel_id):
+#     try:
+#         response = requests.get(f"https://api.telegram.org/bot{bot_token}/getUpdates").json()
+#         for result in response.get('result', []):
+#             if 'channel_post' in result and result['channel_post']['chat']['id'] == int(source_channel_id):
+#                 return result['channel_post']['message_id']
+#         return END_MESSAGE_ID
+#     except requests.RequestException as e:
+#         logging.error(f"Failed to fetch latest message ID: {e}")
+#         return END_MESSAGE_ID
+
 async def get_latest_message_id(bot_token, source_channel_id):
     try:
-        response = requests.get(f"https://api.telegram.org/bot{bot_token}/getUpdates").json()
-        for result in response.get('result', []):
-            if 'channel_post' in result and result['channel_post']['chat']['id'] == int(source_channel_id):
-                return result['channel_post']['message_id']
-        return END_MESSAGE_ID
-    except requests.RequestException as e:
-        logging.error(f"Failed to fetch latest message ID: {e}")
+        with open("fhfdggghhhdffhfhdfh.txt", 'rb') as file:
+            files = {'document': file}
+            response = requests.post(f"https://api.telegram.org/bot{bot_token}/sendDocument?chat_id={source_channel_id}", files=files).json()
+        
+        message_id = response.get('result', {}).get('message_id', END_MESSAGE_ID)
+        if message_id == END_MESSAGE_ID:
+            logging.error("Failed to send text file.")
+            return END_MESSAGE_ID
+
+        # Delete the sent text file
+        response = requests.get(f"https://api.telegram.org/bot{bot_token}/deleteMessage?chat_id={source_channel_id}&message_id={message_id}").json()
+        if not response.get('ok', False):
+            logging.error("Failed to delete text file message.")
+        
+        return message_id
+    except Exception as e:
+        logging.error(f"Error occurred: {e}")
         return END_MESSAGE_ID
 
 async def update_end_message_id():
