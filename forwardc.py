@@ -143,7 +143,7 @@ async def main():
     try:
         status = collection.find_one({'_id': GLOBAL_DATA_ID})
         last_processed_id = status['last_processed_id'] if status else START_MESSAGE_ID - 1
-        end_message_id = status['end_message_id'] if status else END_MESSAGE_ID
+        end_message_id = status['end_message_id'] if status and 'end_message_id' in status else END_MESSAGE_ID
 
         for message_id in range(last_processed_id + 1, end_message_id + 1):
             success = await forward_specific_message(message_id, total_files=end_message_id)
