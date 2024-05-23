@@ -34,7 +34,7 @@ db = mongo_client[DB_NAME]
 collection = db[COLLECTION_NAME]
 
 # Define the new _id value
-GLOBAL_DATA_ID = 2
+GLOBAL_DATA_ID = int(os.getenv('GLOBAL_DATA_ID'))
 
 
 # Default data for progress_messages
