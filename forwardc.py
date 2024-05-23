@@ -32,9 +32,9 @@ bot_logger.setLevel(logging.INFO)
 user_handler = logging.StreamHandler()
 bot_handler = logging.StreamHandler()
 
-# Create formatters with 12-hour time format and add them to the handlers
-user_formatter = logging.Formatter('%(asctime)s - USER - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %I:%M:%S %p')
-bot_formatter = logging.Formatter('%(asctime)s - BOT - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %I:%M:%S %p')
+# Create formatters with date and 12-hour time format and add them to the handlers
+user_formatter = logging.Formatter('%Y-%m-%d %I:%M:%S %p - USER - %(levelname)s - %(message)s')
+bot_formatter = logging.Formatter('%Y-%m-%d %I:%M:%S %p - BOT - %(levelname)s - %(message)s')
 user_handler.setFormatter(user_formatter)
 bot_handler.setFormatter(bot_formatter)
 
@@ -78,7 +78,7 @@ async def forward_specific_message(message_id, total_files):
         user_logger.info(f"Successfully forwarded message {message_id} to {DESTINATION_CHANNEL_ID}")
 
         if message_id % 10 == 0:
-            await send_progress_update(message_id, total_files)
+            await send_progress_update(message_id, START_MESSAGE_ID, total_files)
         return True
     except errors.FloodWait as e:
         user_logger.warning(f"Flood wait error: waiting for {e.value} seconds")
@@ -92,8 +92,8 @@ async def forward_specific_message(message_id, total_files):
         user_logger.error(f"Failed to forward message {message_id}: {e}")
         return False
 
-async def send_progress_update(current_file, total_files):
-    progress = (current_file / total_files) * 100
+async def send_progress_update(current_file, start_file, total_files):
+    progress = ((current_file - start_file) / (total_files - start_file)) * 100
     remaining_files = total_files - current_file
     time_per_file = 2  # Adjust based on actual performance
     eta_seconds = remaining_files * time_per_file
@@ -180,6 +180,8 @@ async def main():
             success = await forward_specific_message(message_id, total_files=end_message_id)
             if success:
                 collection.update_one({'_id': GLOBAL_DATA_ID}, {'$set': {'last_processed_id': message_id}}, upsert=True)
+                if message_id % 10 == 0:
+                    await send_progress_update(message_id, START_MESSAGE_ID, end_message_id)
                 await asyncio.sleep(2)
             else:
                 for progress_id in PROGRESS_IDS:
