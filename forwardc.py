@@ -39,6 +39,16 @@ collection = db[COLLECTION_NAME]
 # Define the new _id value
 GLOBAL_DATA_ID = 1
 
+# Default data for progress_messages
+#DEFAULT_PROGRESS_MESSAGES = [
+#    {'progress_id': 1881720028, 'message_id': 418},
+#    {'progress_id': 5301275567, 'message_id': 420},
+#    {'progress_id': -1002084341815, 'message_id': 21136}
+#]
+
+# Check if the collection is empty, and if so, insert the default data
+#if collection.count_documents({}) == 0:
+#    collection.insert_one({'_id': GLOBAL_DATA_ID, 'last_processed_id': 0, 'end_message_id': 0, 'progress_messages': DEFAULT_PROGRESS_MESSAGES})
 
 # Initialize the Pyrogram Client
 app = Client("forward_bot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
@@ -178,3 +188,4 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+    
