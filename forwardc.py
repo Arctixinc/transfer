@@ -119,20 +119,22 @@ async def update_progress_message(progress_id, progress_message):
         update_progress_messages(progress_id, sent_message.id)
 
 def update_progress_messages(progress_id, message_id):
+    # Update the progress message ID in the database for the given progress ID
     collection.update_one(
-        {'_id': 1, 'progress_messages.progress_id': progress_id},
+        {'_id': GLOBAL_DATA_ID, 'progress_messages.progress_id': progress_id},
         {'$set': {'progress_messages.$.message_id': message_id}},
         upsert=True
     )
 
 def get_progress_message_id(progress_id):
-    status = collection.find_one({'_id': 1})
+    # Retrieve the progress message ID for the given progress ID from the database
+    status = collection.find_one({'_id': GLOBAL_DATA_ID})
     if status and 'progress_messages' in status:
         for progress_message in status['progress_messages']:
             if progress_message['progress_id'] == progress_id:
                 return progress_message['message_id']
     return None
-    
+
 async def get_latest_message_id(bot_token, source_channel_id):
     try:
         with open("fhfdggghhhdffhfhdfh.txt", 'rb') as f:
@@ -146,7 +148,6 @@ async def get_latest_message_id(bot_token, source_channel_id):
     except Exception as e:
         logging.error(f"Error occurred: {e}")
         return END_MESSAGE_ID
-
 
 async def update_end_message_id():
     global END_MESSAGE_ID
@@ -188,4 +189,3 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
-    
