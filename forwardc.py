@@ -85,6 +85,7 @@ async def forward_specific_message(message_id, total_files):
         user_logger.warning(f"Flood wait error: waiting for {e.value} seconds")
         await asyncio.sleep(e.value)
         await msg.edit("<b>Everything is okay now.</b>")
+        await msg.delete()
         return await forward_specific_message(message_id, total_files)
     except errors.RPCError as e:
         if e.CODE == 500 and "INTERDC_X_CALL_RICH_ERROR" in str(e):
@@ -101,7 +102,8 @@ async def send_progress_update(current_file, start_file, total_files):
     eta_seconds = remaining_files * time_per_file
 
     eta_days, eta_hours, eta_minutes, eta_seconds = calculate_eta(eta_seconds)
-
+    current_time = datetime.now(timezone(TIMEZONE)).strftime("%a, %d %b %Y %I:%M:%S %p")
+    
     progress_message = (
         f"[{'⬢' * int(progress * 20 // 100)}{'⬡' * (20 - int(progress * 20 // 100))}]\n"
         f"╭━━━━❰Progress Bar❱━➣\n"
@@ -109,6 +111,7 @@ async def send_progress_update(current_file, start_file, total_files):
         f"┣⪼ 📁 Remaining files: {remaining_files}\n"
         f"┣⪼ ⏳️ Done : {progress:.2f}%\n"
         f"┣⪼ ⏰️ ETA: {int(eta_days)} days, {int(eta_hours)} hours, {int(eta_minutes)} minutes, {int(eta_seconds)} seconds\n"
+        f"┣⪼ 🕒 Last updated: {current_time}\n"
         f"╰━━━━━━━━━━━━━━━➣"
     )
 
