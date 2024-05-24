@@ -1,7 +1,6 @@
 pyrogram
 tgcrypto
 pymongo
-GitPython
 requests
 python-dotenv
 pytz
