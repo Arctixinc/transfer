@@ -100,9 +100,11 @@ async def send_progress_update(current_file, start_file, total_files):
     remaining_files = total_files - current_file
     time_per_file = 2  # Adjust based on actual performance
     eta_seconds = remaining_files * time_per_file
-
+    
     eta_days, eta_hours, eta_minutes, eta_seconds = calculate_eta(eta_seconds)
 
+    current_time = datetime.now().strftime("%Y-%m-%d %I:%M:%S %p")
+    
     progress_message = (
         f"[{'⬢' * int(progress * 20 // 100)}{'⬡' * (20 - int(progress * 20 // 100))}]\n"
         f"╭━━━━❰Progress Bar❱━➣\n"
@@ -110,6 +112,7 @@ async def send_progress_update(current_file, start_file, total_files):
         f"┣⪼ 📁 Remaining files: {remaining_files}\n"
         f"┣⪼ ⏳️ Done : {progress:.2f}%\n"
         f"┣⪼ ⏰️ ETA: {int(eta_days)} days, {int(eta_hours)} hours, {int(eta_minutes)} minutes, {int(eta_seconds)} seconds\n"
+        f"┣⪼ 🕒 Last updated: {current_time}\n"
         f"╰━━━━━━━━━━━━━━━➣"
     )
 
