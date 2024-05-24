@@ -2,6 +2,8 @@ import logging
 import requests
 import asyncio
 import os
+from datetime import datetime
+from pytz import timezone
 from pyrogram import Client, errors
 from pymongo import MongoClient
 from pyrogram.errors import BadRequest
@@ -76,7 +78,7 @@ async def send_progress_update(current_file, total_files):
     remaining_files = total_files - current_file
     time_per_file = 2  # Adjust based on actual performance
     eta_seconds = remaining_files * time_per_file
-
+    current_time = datetime.now(timezone('Asia/Kolkata')).strftime("%a, %d %b %Y %I:%M:%S %p")
     eta_days, eta_hours, eta_minutes, eta_seconds = calculate_eta(eta_seconds)
 
     progress_message = (
@@ -86,6 +88,7 @@ async def send_progress_update(current_file, total_files):
         f"┣⪼ 📁 Remaining files: {remaining_files}\n"
         f"┣⪼ ⏳️ Done : {progress:.2f}%\n"
         f"┣⪼ ⏰️ ETA: {int(eta_days)} days, {int(eta_hours)} hours, {int(eta_minutes)} minutes, {int(eta_seconds)} seconds\n"
+        f"┣⪼ 🕒 Last updated: {current_time}\n"
         f"╰━━━━━━━━━━━━━━━➣"
     )
 
