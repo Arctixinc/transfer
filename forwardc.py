@@ -77,12 +77,15 @@ async def forward_specific_message(message_id, total_files):
         await app.copy_message(chat_id=DESTINATION_CHANNEL_ID, from_chat_id=SOURCE_CHANNEL_ID, message_id=message_id)
         user_logger.info(f"Successfully forwarded message {message_id} to {DESTINATION_CHANNEL_ID}")
 
+        # Check to send progress updates every 10 messages
         if message_id % 10 == 0:
             await send_progress_update(message_id, START_MESSAGE_ID, total_files)
         return True
     except errors.FloodWait as e:
+        msg= await bot.send_message(chat_id=STATUS_ID, text=f"<b>😥 Please wait {e.value} seconds due to flood wait.</b>")
         user_logger.warning(f"Flood wait error: waiting for {e.value} seconds")
         await asyncio.sleep(e.value)
+        await msg.edit("<b>Everything is okay now.</b>")
         return await forward_specific_message(message_id, total_files)
     except errors.RPCError as e:
         if e.CODE == 500 and "INTERDC_X_CALL_RICH_ERROR" in str(e):
@@ -140,13 +143,16 @@ async def update_progress_message(progress_id, progress_message):
         update_progress_messages(progress_id, sent_message.id)
 
 def update_progress_messages(progress_id, message_id):
+    # Check if the progress_id exists in the database
     if collection.find_one({'_id': GLOBAL_DATA_ID, 'progress_messages.progress_id': progress_id}):
+        # Update the existing progress message ID
         collection.update_one(
             {'_id': GLOBAL_DATA_ID, 'progress_messages.progress_id': progress_id},
             {'$set': {'progress_messages.$.message_id': message_id}},
             upsert=True
         )
     else:
+        # Add a new progress message ID
         collection.update_one(
             {'_id': GLOBAL_DATA_ID},
             {'$push': {'progress_messages': {'progress_id': progress_id, 'message_id': message_id}}},
@@ -154,6 +160,7 @@ def update_progress_messages(progress_id, message_id):
         )
 
 def get_progress_message_id(progress_id):
+    # Retrieve the progress message ID for the given progress ID from the database
     status = collection.find_one({'_id': GLOBAL_DATA_ID})
     if status and 'progress_messages' in status:
         for progress_message in status['progress_messages']:
@@ -171,17 +178,28 @@ async def main():
 
     try:
         status = collection.find_one({'_id': GLOBAL_DATA_ID})
-        last_processed_id = status['last_processed_id'] if status else START_MESSAGE_ID - 1
-        end_message_id = status['end_message_id'] if status and 'end_message_id' in status else END_MESSAGE_ID
+        if status:
+            last_processed_id = status['last_processed_id']
+            end_message_id = status['end_message_id']
+        else:
+            last_processed_id = START_MESSAGE_ID - 1
+            end_message_id = END_MESSAGE_ID
 
-        collection.update_one({'_id': GLOBAL_DATA_ID}, {'$set': {'end_message_id': end_message_id}}, upsert=True)
+        # Update end_message_id in the database
+        collection.update_one(
+            {'_id': GLOBAL_DATA_ID},
+            {'$set': {'end_message_id': end_message_id}},
+            upsert=True
+        )
 
         for message_id in range(last_processed_id + 1, end_message_id + 1):
             success = await forward_specific_message(message_id, total_files=end_message_id)
             if success:
-                collection.update_one({'_id': GLOBAL_DATA_ID}, {'$set': {'last_processed_id': message_id}}, upsert=True)
-                if message_id % 10 == 0:
-                    await send_progress_update(message_id, START_MESSAGE_ID, end_message_id)
+                collection.update_one(
+                    {'_id': GLOBAL_DATA_ID},
+                    {'$set': {'last_processed_id': message_id}},
+                    upsert=True
+                )
                 await asyncio.sleep(2)
             else:
                 for progress_id in PROGRESS_IDS:
