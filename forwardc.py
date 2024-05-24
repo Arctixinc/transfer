@@ -86,6 +86,7 @@ async def forward_specific_message(message_id, total_files):
         user_logger.warning(f"Flood wait error: waiting for {e.value} seconds")
         await asyncio.sleep(e.value)
         await msg.edit("<b>Everything is okay now.</b>")
+        await msg.delete()
         return await forward_specific_message(message_id, total_files)
     except errors.RPCError as e:
         if e.CODE == 500 and "INTERDC_X_CALL_RICH_ERROR" in str(e):
