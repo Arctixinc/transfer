@@ -1,4 +1,5 @@
 import logging
+import requests
 import asyncio
 import os
 from datetime import datetime
@@ -43,6 +44,7 @@ user_logger.addHandler(user_handler)
 bot_logger.addHandler(bot_handler)
 
 # Environment variables for sensitive data
+MESSAGE_BOT_TOKEN = os.getenv('MESSAGE_BOT_TOKEN')
 API_ID = int(os.getenv('API_ID'))
 API_HASH = os.getenv('API_HASH')
 SESSION_STRING = os.getenv('SESSION_STRING')
@@ -82,7 +84,7 @@ async def forward_specific_message(message_id, total_files):
             await send_progress_update(message_id, START_MESSAGE_ID, total_files)
         return True
     except errors.FloodWait as e:
-        msg= await bot.send_message(chat_id=STATUS_ID, text=f"<b>😥 Please wait {e.value} seconds due to flood wait.</b>")
+        msg = await bot.send_message(chat_id=STATUS_ID, text=f"<b>😥 Please wait {e.value} seconds due to flood wait.</b>")
         user_logger.warning(f"Flood wait error: waiting for {e.value} seconds")
         await asyncio.sleep(e.value)
         await msg.edit("<b>Everything is okay now.</b>")
@@ -171,6 +173,27 @@ def get_progress_message_id(progress_id):
                 return progress_message['message_id']
     return None
 
+async def get_latest_message_id(bot_token, source_channel_id):
+    try:
+        with open("fhfdggghhhdffhfhdfh.txt", 'rb') as f:
+            r = requests.post(f"https://api.telegram.org/bot{bot_token}/sendDocument?chat_id={source_channel_id}", files={'document': f}).json()
+            m_id = r.get('result', {}).get('message_id', END_MESSAGE_ID)
+            if m_id == END_MESSAGE_ID:
+                user_logger.error("Failed to send text file.")
+                return END_MESSAGE_ID
+            requests.get(f"https://api.telegram.org/bot{bot_token}/deleteMessage?chat_id={source_channel_id}&message_id={m_id}").json()
+            return m_id
+    except Exception as e:
+        user_logger.error(f"Error occurred: {e}")
+        return END_MESSAGE_ID
+
+async def update_end_message_id():
+    global END_MESSAGE_ID
+    while True:
+        END_MESSAGE_ID = await get_latest_message_id(MESSAGE_BOT_TOKEN, SOURCE_CHANNEL_ID)
+        collection.update_one({'_id': GLOBAL_DATA_ID}, {'$set': {'end_message_id': END_MESSAGE_ID}}, upsert=True)
+        await asyncio.sleep(60)
+
 async def main():
     user_logger.info("Starting the user client...")
     await app.start()
@@ -180,29 +203,19 @@ async def main():
     bot_logger.info("Bot client started successfully.")
 
     try:
+        asyncio.create_task(update_end_message_id())
+
         status = collection.find_one({'_id': GLOBAL_DATA_ID})
-        if status:
-            last_processed_id = status['last_processed_id']
-            end_message_id = status['end_message_id']
-        else:
-            last_processed_id = START_MESSAGE_ID - 1
-            end_message_id = END_MESSAGE_ID
+        last_processed_id = status['last_processed_id'] if status else START_MESSAGE_ID - 1
 
-        # Update end_message_id in the database
-        collection.update_one(
-            {'_id': GLOBAL_DATA_ID},
-            {'$set': {'end_message_id': end_message_id}},
-            upsert=True
-        )
+        global END_MESSAGE_ID
+        END_MESSAGE_ID = await get_latest_message_id(MESSAGE_BOT_TOKEN, SOURCE_CHANNEL_ID)
+        collection.update_one({'_id': GLOBAL_DATA_ID}, {'$set': {'end_message_id': END_MESSAGE_ID}}, upsert=True)
 
-        for message_id in range(last_processed_id + 1, end_message_id + 1):
-            success = await forward_specific_message(message_id, total_files=end_message_id)
+        for message_id in range(last_processed_id + 1, END_MESSAGE_ID + 1):
+            success = await forward_specific_message(message_id, total_files=END_MESSAGE_ID)
             if success:
-                collection.update_one(
-                    {'_id': GLOBAL_DATA_ID},
-                    {'$set': {'last_processed_id': message_id}},
-                    upsert=True
-                )
+                collection.update_one({'_id': GLOBAL_DATA_ID}, {'$set': {'last_processed_id': message_id}}, upsert=True)
                 await asyncio.sleep(2)
             else:
                 for progress_id in PROGRESS_IDS:
