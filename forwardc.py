@@ -103,8 +103,7 @@ async def send_progress_update(current_file, start_file, total_files):
     
     eta_days, eta_hours, eta_minutes, eta_seconds = calculate_eta(eta_seconds)
 
-    current_time = datetime.now().strftime("%Y-%m-%d %I:%M:%S %p")
-    
+    current_time = datetime.now(timezone(TIMEZONE)).strftime("%a, %d %b %Y %I:%M:%S %p")
     progress_message = (
         f"[{'⬢' * int(progress * 20 // 100)}{'⬡' * (20 - int(progress * 20 // 100))}]\n"
         f"╭━━━━❰Progress Bar❱━➣\n"
